@@ -5,8 +5,9 @@ select
     temp.order_number, 
     temp.time_lag, 
     temp.time_diff, 
-    temp.counter, 
-    SELECT EXTRACT(epoch FROM INTERVAL avg(temp.time_diff) over(partition by temp.user_id)) as hours_between_orders
+    temp.counter,
+    EXTRACT(epoch FROM temp.time_diff):: integer as sec
+    
 from (
     SELECT 
         user_id,
@@ -24,4 +25,4 @@ from (
                         FROM   user_actions
                         WHERE  action = 'cancel_order')) as temp
 where counter > 1
-limit(10);
+limit 100;
