@@ -1,10 +1,17 @@
-SELECT date,
-       orders_count,
-       sum(orders_count) OVER (ORDER BY date)::integer as orders_count_cumulative
-FROM   (SELECT date(creation_time) as date,
-               count(order_id) as orders_count
-        FROM   orders
-        WHERE  order_id not in (SELECT order_id 
-                                FROM   user_actions
-                                WHERE  action = 'cancel_order')--подняли не отмененные ордера
-        GROUP BY date) t
+select 
+    temp.date,
+    temp.orders_count,
+    round(avg(temp.orders_count) over(order by temp.date ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING), 2) as moving_avg
+
+from(select creation_time::date as date, count(*) as orders_count
+from orders
+where order_id not in(
+    select order_id
+    from user_actions
+    where action = 'cancel_order'
+
+)
+group by date) as temp
+
+
+;) t

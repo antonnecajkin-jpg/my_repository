@@ -1,30 +1,16 @@
-class First_and_last_occurrence:
-    def __init__(self, input_line: str):
-        self.input_line = input_line
-        self.find_char = 'f'
-        
-        
+# На вход программе подаётся некоторая буква русского алфавита в верхнем регистре.
+# Найдите следующую за ней букву и выведите её на экран. Если введённая буква является последней
+# в алфавите, то выведите текст «Дальше букв нет» (без кавычек).
 
-    def find_index_char(self):
-        first_char_in = 0
-        last_char_in = 0
-        if self.find_char not in self.input_line:
-            return 'NO'
-        else:
-             first_char_in = self.input_line.find(self.find_char)
-             for_rfind = self.input_line.replace(self.input_line[0:first_char_in], '_'*first_char_in) 
-             last_char_in = for_rfind.rfind(self.find_char)
-             if last_char_in != 1:
-                 last_char_in = last_char_in
-             return first_char_in, last_char_in
-             
-                 
-                 
-                 
-        
+# Формат входных данных
+# На вход программе подаётся одна буква русского алфавита в верхнем регистре.
 
+# Формат выходных данных
+# Программа должна вывести одну букву в верхнем регистре или текст «Дальше букв нет» (без кавычек) 
+# в соответствии с условием задачи.
 
+# Примечание. Будем считать, что буквы Ё нет в русском алфавите. 🤫
 
-result = First_and_last_occurrence(input()).find_index_char()
-print(result)
-
+litera = ord(input())
+if litera < ord('Я'):
+    print(chr(litera + 1))
