@@ -10,10 +10,10 @@ default_args = {
 }
 
 with DAG(
-    'my_operator_dag',                          # Имя DAG
+    'operator_check',                          # Имя DAG
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
-    schedule_interval='@daily',                 # Расписание
+    schedule_interval=None,                 # Расписание
     catchup=False,
     tags=['greenplum']
 ) as dag:
@@ -25,7 +25,7 @@ with DAG(
         task_id='create_table',
         postgres_conn_id='my_greenplum',        # Connection из Airflow
         sql='''
-            CREATE TABLE IF NOT EXISTS my_table (
+            CREATE TABLE IF NOT EXISTS my_drim (
                 id INT,
                 name TEXT
             ) DISTRIBUTED BY (id);
@@ -36,7 +36,7 @@ with DAG(
         task_id='insert_data',
         postgres_conn_id='my_greenplum',
         sql='''
-            INSERT INTO my_table VALUES 
+            INSERT INTO my_drim VALUES 
             (1, 'John'),
             (2, 'Jane');
         '''
