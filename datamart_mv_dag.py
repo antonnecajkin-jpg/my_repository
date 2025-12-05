@@ -1,0 +1,84 @@
+from airflow import DAG
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from datetime import datetime
+
+with DAG(
+    dag_id='datamart_mv_dag',
+    schedule_interval=None,
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+) as dag:
+
+    create_lesson_popularity = SQLExecuteQueryOperator(
+        task_id='create_lesson_popularity_summary',
+        conn_id='my_greenplum',
+        sql="""
+            CREATE MATERIALIZED VIEW IF NOT EXISTS dm.lesson_popularity_summary AS
+            SELECT 
+                l.lesson_id,
+                l.title as lesson_title,
+                l.course_id,
+                c.title as course_title,
+                COUNT(v.viewed_at) as total_views,
+                COUNT(DISTINCT v.user_id) as unique_users,
+                MIN(v.viewed_at) as first_view,
+                MAX(v.viewed_at) as last_view
+            FROM core.dim_lesson l
+            JOIN core.dim_course c ON l.course_id = c.course_id
+            LEFT JOIN core.fact_lesson_views v ON l.lesson_id = v.lesson_id
+            GROUP BY l.lesson_id, l.title, l.course_id, c.title
+            ORDER BY total_views DESC;
+        """,
+    )
+
+    create_inactive_users = SQLExecuteQueryOperator(
+        task_id='create_inactive_users_summary',
+        conn_id='my_greenplum',
+        sql="""
+            CREATE MATERIALIZED VIEW IF NOT EXISTS dm.inactive_users_summary AS
+            SELECT 
+                u.user_id,
+                u.name as user_name,
+                u.email,
+                u.age,
+                COUNT(DISTINCT e.course_id) as enrollments_count,
+                u.registration_date
+            FROM core.dim_user u
+            LEFT JOIN core.fact_enrollments e ON u.user_id = e.user_id
+            LEFT JOIN core.fact_lesson_views v ON u.user_id = v.user_id
+            WHERE v.user_id IS NULL
+            GROUP BY u.user_id, u.name, u.email, u.age, u.registration_date
+            ORDER BY u.registration_date DESC;
+        """,
+    )
+
+    create_course_completion = SQLExecuteQueryOperator(
+        task_id='create_course_completion_rate',
+        conn_id='my_greenplum',
+        sql="""
+            CREATE MATERIALIZED VIEW IF NOT EXISTS dm.course_completion_rate AS
+            SELECT 
+                u.user_id,
+                u.name as user_name,
+                c.course_id,
+                c.title as course_title,
+                COUNT(DISTINCT l.lesson_id) as lessons_in_course,
+                COUNT(DISTINCT v.lesson_id) as lessons_viewed,
+                ROUND(
+                    COUNT(DISTINCT v.lesson_id) * 100.0 / 
+                    NULLIF(COUNT(DISTINCT l.lesson_id), 0), 
+                    2
+                ) as completion_rate
+            FROM core.dim_user u
+            JOIN core.fact_enrollments e ON u.user_id = e.user_id
+            JOIN core.dim_course c ON e.course_id = c.course_id
+            LEFT JOIN core.dim_lesson l ON c.course_id = l.course_id
+            LEFT JOIN core.fact_lesson_views v ON u.user_id = v.user_id 
+                AND l.lesson_id = v.lesson_id
+            GROUP BY u.user_id, u.name, c.course_id, c.title
+            ORDER BY c.course_id, completion_rate DESC;
+        """,
+    )
+
+    
+    create_lesson_popularity >> create_inactive_users >> create_course_completion
